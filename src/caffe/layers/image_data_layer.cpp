@@ -36,9 +36,18 @@ void ImageDataLayer<Dtype>::DataLayerSetUp(const vector<Blob<Dtype>*>& bottom,
   LOG(INFO) << "Opening file " << source;
   std::ifstream infile(source.c_str());
   string filename;
-  int label;
+  /*int label;
   while (infile >> filename >> label) {
     lines_.push_back(std::make_pair(filename, label));
+  }*/
+  while (infile >> filename) {
+    std::vector<int> vec_label;
+    for (int i=0; i<this->layer_param_.data_param().label_num(); i++){
+      int lab;
+      infile >> lab;
+      vec_label.push_back(lab);
+      lines_.push_back(std::make_pair(filename, vec_label));
+    }
   }
 
   if (this->layer_param_.image_data_param().shuffle()) {
@@ -75,9 +84,11 @@ void ImageDataLayer<Dtype>::DataLayerSetUp(const vector<Blob<Dtype>*>& bottom,
       << top[0]->channels() << "," << top[0]->height() << ","
       << top[0]->width();
   // label
-  vector<int> label_shape(1, batch_size);
-  top[1]->Reshape(label_shape);
-  this->prefetch_label_.Reshape(label_shape);
+  //vector<int> label_shape(1, batch_size);
+  //top[1]->Reshape(label_shape);
+  //this->prefetch_label_.Reshape(label_shape);
+  top[1]->Reshape(batch_size, this->layer_param_.data_param().label_num(), 1, 1);
+  this->prefetch_label_.Reshape(batch_size, this->layer_param_.data_param().label_num(), 1, 1);
 }
 
 template <typename Dtype>
@@ -135,7 +146,11 @@ void ImageDataLayer<Dtype>::InternalThreadEntry() {
     this->data_transformer_->Transform(cv_img, &(this->transformed_data_));
     trans_time += timer.MicroSeconds();
 
-    prefetch_label[item_id] = lines_[lines_id_].second;
+    //prefetch_label[item_id] = lines_[lines_id_].second;
+    //modified
+    for (int label_i = 0; label_i < lines_[lines_id_].second.size(); label_i++) {
+      prefetch_label[item_id * lines_[lines_id_].second.size() + label_i] = lines_[lines_id_].second[label_i];
+    }
     // go to the next iter
     lines_id_++;
     if (lines_id_ >= lines_size) {

@@ -31,11 +31,12 @@ message Datum {
   optional int32 width = 3;
   // the actual image data, in bytes
   optional bytes data = 4;
-  optional int32 label = 5;
+  repeated int32 label = 5;
   // Optionally, the datum could also hold float data.
   repeated float float_data = 6;
   // If true data contains an encoded image that need to be decoded
   optional bool encoded = 7 [default = false];
+  // optional int32 label_num = 8 [default = 646];
 }
 
 message FillerParameter {
@@ -487,6 +488,7 @@ message DataParameter {
   optional bool mirror = 6 [default = false];
   // Force the encoded image to have 3 color channels
   optional bool force_encoded_color = 9 [default = false];
+  optional int32 label_num = 10 [default = 646];
 }
 
 message DropoutParameter {

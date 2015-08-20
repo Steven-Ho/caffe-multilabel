@@ -187,7 +187,7 @@ void Solver<Dtype>::Step(int iters) {
       }
     }
 
-    if (param_.test_interval() && iter_ % param_.test_interval() == 0
+    if (param_.test_interval() && iter_ % /*param_.test_interval()*/50 == 0
         && (iter_ > 0 || param_.test_initialization())) {
       TestAll();
     }
@@ -276,7 +276,8 @@ void Solver<Dtype>::Solve(const char* resume_file) {
     LOG(INFO) << "Iteration " << iter_ << ", loss = " << loss;
   }
   if (param_.test_interval() && iter_ % param_.test_interval() == 0) {
-    TestAll();
+    //TestAll();
+    Test(0);
   }
   LOG(INFO) << "Optimization Done.";
 }
@@ -300,7 +301,7 @@ void Solver<Dtype>::Test(const int test_net_id) {
   vector<Blob<Dtype>*> bottom_vec;
   const shared_ptr<Net<Dtype> >& test_net = test_nets_[test_net_id];
   Dtype loss = 0;
-  for (int i = 0; i < param_.test_iter(test_net_id); ++i) {
+  for (int i = 0; i < 10/*param_.test_iter(test_net_id)*/; ++i) {
     Dtype iter_loss;
     const vector<Blob<Dtype>*>& result =
         test_net->Forward(bottom_vec, &iter_loss);

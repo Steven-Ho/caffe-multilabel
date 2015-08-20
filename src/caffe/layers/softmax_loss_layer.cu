@@ -48,6 +48,9 @@ void SoftmaxWithLossLayer<Dtype>::Forward_gpu(
   SoftmaxLossForwardGPU<Dtype><<<CAFFE_GET_BLOCKS(nthreads),
       CAFFE_CUDA_NUM_THREADS>>>(nthreads, prob_data, label, loss_data,
       outer_num_, dim, inner_num_, has_ignore_label_, ignore_label_, counts);
+
+  // printf("inner_num_: %d\n", inner_num_);
+  // printf("outer_num_: %d\n", outer_num_);
   Dtype loss;
   caffe_gpu_asum(nthreads, loss_data, &loss);
   if (normalize_) {
@@ -109,7 +112,28 @@ void SoftmaxWithLossLayer<Dtype>::Backward_gpu(const vector<Blob<Dtype>*>& top,
     SoftmaxLossBackwardGPU<Dtype><<<CAFFE_GET_BLOCKS(nthreads),
         CAFFE_CUDA_NUM_THREADS>>>(nthreads, top_data, label, bottom_diff,
         outer_num_, dim, inner_num_, has_ignore_label_, ignore_label_, counts);
+    
+
     const Dtype loss_weight = top[0]->cpu_diff()[0];
+
+    // new
+    // const Dtype loss_const = top[0]->cpu_diff()[0];//loss_weight
+    // Dtype* loss_weight = new Dtype[prob_.count()];
+    /*for (int i = 0; i < outer_num_; ++i) {
+      for (int j = 0; j < inner_num_; ++j) {
+        //const int label_value = static_cast<int>(label[i * inner_num_ + j]);
+        int length = bottom[0]->shape(softmax_axis_);
+        if (label_value == 1) {
+          for (int c = 0; c < length; ++c) {
+            loss_weight[i * dim + c * inner_num_ + j] = 0.995 * loss_const;
+          }
+        } else {
+          for (int c = 0; c < length; ++c) {
+            loss_weight[i * dim + c * inner_num_ + j] = 0.005 * loss_const;
+          }
+        }
+      }
+    }*/
     if (normalize_) {
       Dtype count;
       caffe_gpu_asum(nthreads, counts, &count);
@@ -117,6 +141,16 @@ void SoftmaxWithLossLayer<Dtype>::Backward_gpu(const vector<Blob<Dtype>*>& top,
     } else {
       caffe_gpu_scal(prob_.count(), loss_weight / outer_num_, bottom_diff);
     }
+    /*if (normalize_) {
+      Dtype count;
+      caffe_gpu_asum(nthreads, counts, &count);
+      caffe_scal(prob_.count(), static_cast<Dtype>(1.0 / count), bottom_diff);
+    } else {
+      caffe_scal(prob_.count(), static_cast<Dtype>(1.0 / outer_num_), bottom_diff);
+    }
+    caffe_mul(prob_.count(), bottom_diff, loss_weight, bottom_diff);
+    delete[] loss_weight;*/
+    //LOG(INFO) << bottom_diff[0] << ", " << bottom_diff[1] << ", " << bottom_diff[2] << ", " << bottom_diff[3];
   }
 }
 

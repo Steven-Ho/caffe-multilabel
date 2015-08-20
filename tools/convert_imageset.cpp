@@ -68,12 +68,27 @@ int main(int argc, char** argv) {
   const string encode_type = FLAGS_encode_type;
 
   std::ifstream infile(argv[2]);
-  std::vector<std::pair<std::string, int> > lines;
+  //std::vector<std::pair<std::string, int> > lines;
+  std::vector<std::pair<std::string, std::vector<int> > > lines;
   std::string filename;
-  int label;
-  while (infile >> filename >> label) {
-    lines.push_back(std::make_pair(filename, label));
+  //int label;
+  //while (infile >> filename >> label) {
+  //  lines.push_back(std::make_pair(filename, label));
+  //}
+  //modified
+  printf("%s\n",argv[2]);
+  while (infile >> filename) {
+    //printf("Processing\n");
+    std::vector<int> vec_label;
+    for (int i=0; i<1; i++){
+      int lab;
+      infile >> lab;
+      vec_label.push_back(lab);
+      
+    }
+    lines.push_back(std::make_pair(filename, vec_label));
   }
+  printf("%d\n", int(lines.size()));
   if (FLAGS_shuffle) {
     // randomly shuffle data
     LOG(INFO) << "Shuffling data";

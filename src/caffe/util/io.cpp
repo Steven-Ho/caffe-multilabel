@@ -111,7 +111,8 @@ static bool matchExt(const std::string & fn,
     return true;
   return false;
 }
-bool ReadImageToDatum(const string& filename, const int label,
+//modified
+bool ReadImageToDatum(const string& filename, const std::vector<int> label,
     const int height, const int width, const bool is_color,
     const std::string & encoding, Datum* datum) {
   cv::Mat cv_img = ReadImageToCVMat(filename, height, width, is_color);
@@ -124,19 +125,27 @@ bool ReadImageToDatum(const string& filename, const int label,
       cv::imencode("."+encoding, cv_img, buf);
       datum->set_data(std::string(reinterpret_cast<char*>(&buf[0]),
                       buf.size()));
-      datum->set_label(label);
+      //datum->set_label(label);
+      datum->mutable_label()->Clear();
+      for (int label_i = 0; label_i < label.size(); label_i++) {
+        datum->add_label(label[label_i]);
+      }
       datum->set_encoded(true);
       return true;
     }
     CVMatToDatum(cv_img, datum);
-    datum->set_label(label);
+    //datum->set_label(label);
+    datum->mutable_label()->Clear();
+    for (int label_i = 0; label_i < label.size(); label_i++) {
+      datum->add_label(label[label_i]);
+    }
     return true;
   } else {
     return false;
   }
 }
 
-bool ReadFileToDatum(const string& filename, const int label,
+bool ReadFileToDatum(const string& filename, const std::vector<int> label,
     Datum* datum) {
   std::streampos size;
 
@@ -148,7 +157,11 @@ bool ReadFileToDatum(const string& filename, const int label,
     file.read(&buffer[0], size);
     file.close();
     datum->set_data(buffer);
-    datum->set_label(label);
+    //datum->set_label(label);
+    datum->mutable_label()->Clear();
+    for (int label_i = 0; label_i < label.size(); label_i++) {
+      datum->add_label(label[label_i]);
+    }
     datum->set_encoded(true);
     return true;
   } else {

@@ -232,12 +232,13 @@ class ImageDataLayer : public BasePrefetchingDataLayer<Dtype> {
   virtual inline int ExactNumBottomBlobs() const { return 0; }
   virtual inline int ExactNumTopBlobs() const { return 2; }
 
- protected:
+ //protected:
   shared_ptr<Caffe::RNG> prefetch_rng_;
   virtual void ShuffleImages();
   virtual void InternalThreadEntry();
 
-  vector<std::pair<std::string, int> > lines_;
+  //vector<std::pair<std::string, int> > lines_;
+  vector<std::pair<std::string, std::vector<int> > > lines_;
   int lines_id_;
 };
 

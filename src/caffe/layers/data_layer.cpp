@@ -54,9 +54,14 @@ void DataLayer<Dtype>::DataLayerSetUp(const vector<Blob<Dtype>*>& bottom,
       << top[0]->width();
   // label
   if (this->output_labels_) {
-    vector<int> label_shape(1, this->layer_param_.data_param().batch_size());
-    top[1]->Reshape(label_shape);
-    this->prefetch_label_.Reshape(label_shape);
+    //vector<int> label_shape(1, this->layer_param_.data_param().batch_size());
+    //modified
+    //vector<int> label_shape(this->layer_param_.data_param().batch_size(), 646, 1, 1);
+    //top[1]->Reshape(label_shape);
+    //this->prefetch_label_.Reshape(label_shape);
+    top[1]->Reshape(this->layer_param_.data_param().batch_size(), this->layer_param_.data_param().label_num(), 1, 1);
+    LOG(INFO) << "label_num: " << this->layer_param_.data_param().label_num();
+    this->prefetch_label_.Reshape(this->layer_param_.data_param().batch_size(), this->layer_param_.data_param().label_num(), 1, 1);
   }
 }
 
@@ -101,8 +106,13 @@ void DataLayer<Dtype>::InternalThreadEntry() {
     this->transformed_data_.set_cpu_data(top_data + offset);
     this->data_transformer_->Transform(datum, &(this->transformed_data_));
     // Copy label.
+
     if (this->output_labels_) {
-      top_label[item_id] = datum.label();
+      //top_label[item_id] = datum.label();
+      //modified
+      for (int label_i = 0; label_i < datum.label_size(); label_i++){
+        top_label[item_id * datum.label_size() + label_i] = datum.label(label_i);
+      }
     }
     trans_time += timer.MicroSeconds();
     timer.Start();

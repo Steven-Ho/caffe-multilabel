@@ -60,6 +60,8 @@ void ReshapeLayer<Dtype>::Reshape(const vector<Blob<Dtype>*>& bottom,
   CHECK_EQ(top_shape_index, top_shape.size());
   for (int i = 0; i < copy_axes_.size(); ++i) {
     const int copy_axis_index = copy_axes_[i];
+    // LOG(INFO) << "copy_axes_.size(): " << copy_axes_.size();
+    // LOG(INFO) << "i: " << i;
     CHECK_GT(bottom[0]->num_axes(), start_axis + copy_axis_index)
         << "new shape contains a 0, but there was no corresponding bottom axis "
         << "to copy";

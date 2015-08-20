@@ -52,6 +52,12 @@ void AccuracyLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
   vector<int> max_id(top_k_+1);
   int count = 0;
   for (int i = 0; i < outer_num_; ++i) {
+    int positive2 = 0;
+    int negative2 = 0;
+    int correct = 0;
+    int error = 0;
+    int positive1 = 0;
+    int negative1 = 0;
     for (int j = 0; j < inner_num_; ++j) {
       const int label_value =
           static_cast<int>(bottom_label[i * inner_num_ + j]);
@@ -70,16 +76,35 @@ void AccuracyLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
           bottom_data_vector.begin(), bottom_data_vector.begin() + top_k_,
           bottom_data_vector.end(), std::greater<std::pair<Dtype, int> >());
       // check if true label is in top k predictions
-      for (int k = 0; k < top_k_; k++) {
-        if (bottom_data_vector[k].second == label_value) {
-          ++accuracy;
+      for (int k = 0; k < 1; k++) {//top_k_ modified for binary classifier
+        if (label_value == 0){
+          negative1++;
+        }else{
+          positive1++;
+        }
+        if (bottom_data_vector[0].second == 0){
+          negative2++;
+        }else{
+          positive2++;
+        }
+        count++;
+        if (bottom_data_vector[0].second == label_value) {
+          accuracy += Dtype(1);
+          correct++;
           break;
+        }else{
+          error++;
         }
       }
-      ++count;
+    }
+    if (i==0) {
+      //LOG(INFO) << "correct: " << correct << ", error: " << error;
+      //LOG(INFO) << "positive1: " << positive1 << ", negative1: " <<negative1;
+      //LOG(INFO) << "positive2: " << positive2 << ", negative2: " <<negative2;      
     }
   }
-
+  //LOG(INFO) << "accuracy: " << accuracy << ", count: " <<count;
+  LOG(INFO) << "accuracy rate: " << accuracy / count;
   // LOG(INFO) << "Accuracy: " << accuracy;
   top[0]->mutable_cpu_data()[0] = accuracy / count;
   // Accuracy layer should not be used as a loss function.
