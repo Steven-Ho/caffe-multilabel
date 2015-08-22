@@ -123,7 +123,7 @@ void SoftmaxWithLossLayer<Dtype>::Backward_cpu(const vector<Blob<Dtype>*>& top,
     }
     // Scale gradient
     const Dtype loss_const = top[0]->cpu_diff()[0];//loss_weight
-    LOG(INFO) << "loss_const: " << loss_const;
+    //LOG(INFO) << "loss_const: " << loss_const;
     //const Dtype loss_weight = top[0]->cpu_diff()[0];//loss_weight
     Dtype* loss_weight = new Dtype[prob_.count()];
     // LOG(INFO) << prob_.count();

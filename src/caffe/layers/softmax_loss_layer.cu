@@ -84,8 +84,37 @@ __global__ void SoftmaxLossBackwardGPU(const int nthreads, const Dtype* top,
       }
       counts[index] = 0;
     } else {
-      bottom_diff[n * dim + label_value * spatial_dim + s] -= 1;
+      Dtype coef;
+      if (label_value == 1) {
+        coef = 0.8;
+      } else {
+        coef = 0.2;
+      }
+      bottom_diff[n * dim + label_value * spatial_dim + s] -= (1 * coef);
       counts[index] = 1;
+    }
+  }
+}
+
+template <typename Dtype>
+__global__ void LossWeightGPU(const int nthreads, const Dtype* top,
+          const Dtype* label, Dtype* loss_weight, const int num, const int dim,
+          const int spatial_dim, const Dtype loss_const) {
+  const int channels = dim / spatial_dim;
+
+  CUDA_KERNEL_LOOP(index, nthreads) {
+    const int n = index / spatial_dim;
+    const int s = index % spatial_dim;
+    const int label_value = static_cast<int>(label[n * spatial_dim + s]);
+
+    if (label_value == 1) {
+      for (int c = 0; c < channels; ++c) {
+        loss_weight[n * dim + c * spatial_dim + s] = 0.8 * loss_const;            
+      }
+    } else {
+      for (int c = 0; c < channels; ++c) {
+        loss_weight[n * dim + c * spatial_dim + s] = 0.2 * loss_const;
+      }
     }
   }
 }
@@ -113,44 +142,25 @@ void SoftmaxWithLossLayer<Dtype>::Backward_gpu(const vector<Blob<Dtype>*>& top,
         CAFFE_CUDA_NUM_THREADS>>>(nthreads, top_data, label, bottom_diff,
         outer_num_, dim, inner_num_, has_ignore_label_, ignore_label_, counts);
     
-
-    const Dtype loss_weight = top[0]->cpu_diff()[0];
-
-    // new
-    // const Dtype loss_const = top[0]->cpu_diff()[0];//loss_weight
-    // Dtype* loss_weight = new Dtype[prob_.count()];
-    /*for (int i = 0; i < outer_num_; ++i) {
-      for (int j = 0; j < inner_num_; ++j) {
-        //const int label_value = static_cast<int>(label[i * inner_num_ + j]);
-        int length = bottom[0]->shape(softmax_axis_);
-        if (label_value == 1) {
-          for (int c = 0; c < length; ++c) {
-            loss_weight[i * dim + c * inner_num_ + j] = 0.995 * loss_const;
-          }
-        } else {
-          for (int c = 0; c < length; ++c) {
-            loss_weight[i * dim + c * inner_num_ + j] = 0.005 * loss_const;
-          }
-        }
-      }
-    }*/
+    //LOG(INFO) << "before sumation";
+    Dtype count;    
+    caffe_gpu_asum(nthreads, counts, &count);
+    
+    const Dtype loss_const = top[0]->cpu_diff()[0];//loss_weight
+    Dtype* loss_weight = new Dtype[prob_.count()];
+    //LOG(INFO) << "prob_.count: " << prob_.count();
+    /*LossWeightGPU<Dtype><<<CAFFE_GET_BLOCKS(nthreads),
+      CAFFE_CUDA_NUM_THREADS>>>(nthreads, top_data, label, loss_weight,
+      outer_num_, dim, inner_num_, loss_const);*/
+    
     if (normalize_) {
-      Dtype count;
-      caffe_gpu_asum(nthreads, counts, &count);
-      caffe_gpu_scal(prob_.count(), loss_weight / count, bottom_diff);
+      caffe_gpu_scal(prob_.count(), static_cast<Dtype>(1.0 / count), bottom_diff);
     } else {
-      caffe_gpu_scal(prob_.count(), loss_weight / outer_num_, bottom_diff);
+      caffe_gpu_scal(prob_.count(), static_cast<Dtype>(1.0 / outer_num_), bottom_diff);
     }
-    /*if (normalize_) {
-      Dtype count;
-      caffe_gpu_asum(nthreads, counts, &count);
-      caffe_scal(prob_.count(), static_cast<Dtype>(1.0 / count), bottom_diff);
-    } else {
-      caffe_scal(prob_.count(), static_cast<Dtype>(1.0 / outer_num_), bottom_diff);
-    }
-    caffe_mul(prob_.count(), bottom_diff, loss_weight, bottom_diff);
-    delete[] loss_weight;*/
-    //LOG(INFO) << bottom_diff[0] << ", " << bottom_diff[1] << ", " << bottom_diff[2] << ", " << bottom_diff[3];
+    //LOG(INFO) << "after normalize";
+    //caffe_gpu_mul(prob_.count(), bottom_diff, loss_weight, bottom_diff);
+    delete[] loss_weight;
   }
 }
 

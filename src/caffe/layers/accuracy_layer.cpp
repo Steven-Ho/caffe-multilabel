@@ -36,14 +36,16 @@ void AccuracyLayer<Dtype>::Reshape(
       << "e.g., if label axis == 1 and prediction shape is (N, C, H, W), "
       << "label count (number of labels) must be N*H*W, "
       << "with integer values in {0, 1, ..., C-1}.";
-  vector<int> top_shape(0);  // Accuracy is a scalar; 0 axes.
+  //vector<int> top_shape(0);  // Accuracy is a scalar; 0 axes.
+  vector<int> top_shape(1);
+  top_shape[0] = 6;
   top[0]->Reshape(top_shape);
 }
 
 template <typename Dtype>
 void AccuracyLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
     const vector<Blob<Dtype>*>& top) {
-  Dtype accuracy = 0;
+  // Dtype accuracy = 0;
   const Dtype* bottom_data = bottom[0]->cpu_data();
   const Dtype* bottom_label = bottom[1]->cpu_data();
   const int dim = bottom[0]->count() / outer_num_;
@@ -51,13 +53,11 @@ void AccuracyLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
   vector<Dtype> maxval(top_k_+1);
   vector<int> max_id(top_k_+1);
   int count = 0;
+  int true_positive = 0;
+  int true_negative = 0;
+  int false_positive = 0;
+  int false_negative = 0;
   for (int i = 0; i < outer_num_; ++i) {
-    int positive2 = 0;
-    int negative2 = 0;
-    int correct = 0;
-    int error = 0;
-    int positive1 = 0;
-    int negative1 = 0;
     for (int j = 0; j < inner_num_; ++j) {
       const int label_value =
           static_cast<int>(bottom_label[i * inner_num_ + j]);
@@ -76,26 +76,22 @@ void AccuracyLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
           bottom_data_vector.begin(), bottom_data_vector.begin() + top_k_,
           bottom_data_vector.end(), std::greater<std::pair<Dtype, int> >());
       // check if true label is in top k predictions
-      for (int k = 0; k < 1; k++) {//top_k_ modified for binary classifier
-        if (label_value == 0){
-          negative1++;
-        }else{
-          positive1++;
+      count++;
+      if (label_value == 0) {
+        if (bottom_data_vector[0].second == 0) {
+          true_negative++;
+        } else {
+          false_positive++;
         }
-        if (bottom_data_vector[0].second == 0){
-          negative2++;
-        }else{
-          positive2++;
-        }
-        count++;
-        if (bottom_data_vector[0].second == label_value) {
-          accuracy += Dtype(1);
-          correct++;
-          break;
-        }else{
-          error++;
+      } else {
+        if (bottom_data_vector[0].second == 0) {
+          false_negative++;
+        } else {
+          true_positive++;
         }
       }
+      //for (int k = 0; k < 1; k++) {//top_k_ modified for binary classifier
+      //}
     }
     if (i==0) {
       //LOG(INFO) << "correct: " << correct << ", error: " << error;
@@ -104,9 +100,14 @@ void AccuracyLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
     }
   }
   //LOG(INFO) << "accuracy: " << accuracy << ", count: " <<count;
-  LOG(INFO) << "accuracy rate: " << accuracy / count;
+  //LOG(INFO) << "accuracy rate: " << accuracy / count;
   // LOG(INFO) << "Accuracy: " << accuracy;
-  top[0]->mutable_cpu_data()[0] = accuracy / count;
+  top[0]->mutable_cpu_data()[0] = Dtype(true_positive) / (true_positive + false_negative);
+  top[0]->mutable_cpu_data()[1] = Dtype(true_negative) / (true_negative + false_positive);
+  top[0]->mutable_cpu_data()[2] = Dtype(false_positive) / (true_negative + false_positive);
+  top[0]->mutable_cpu_data()[3] = Dtype(false_negative) / (true_positive + false_negative);
+  top[0]->mutable_cpu_data()[4] = Dtype(true_positive) / (true_positive + false_positive);
+  top[0]->mutable_cpu_data()[5] = Dtype(true_negative) / (true_negative + false_negative);
   // Accuracy layer should not be used as a loss function.
 }
 
