@@ -58,13 +58,7 @@ template <typename Dtype>
 void SoftmaxWithLossLayer<Dtype>::Forward_cpu(
     const vector<Blob<Dtype>*>& bottom, const vector<Blob<Dtype>*>& top) {
   // The forward pass computes the softmax prob values.
-  // LOG(INFO) << "inner_num_: " << inner_num_;
-  // LOG(INFO) << "outer_num_: " << outer_num_;
-  // printf("inner_num_: %d\n", inner_num_);
-  // printf("outer_num_: %d\n", outer_num_);
-  // CHECK_EQ(0, 1) << "inner_num_: " << inner_num_;
-  // CHECK_EQ(0, 1) << "outer_num_: " << outer_num_;
-
+  LOG(INFO) << "Using Forward_cpu!";
   softmax_layer_->Forward(softmax_bottom_vec_, softmax_top_vec_);
   const Dtype* prob_data = prob_.cpu_data();
   const Dtype* label = bottom[1]->cpu_data();
