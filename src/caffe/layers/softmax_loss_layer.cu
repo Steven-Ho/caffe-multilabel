@@ -13,13 +13,13 @@ __global__ void SoftmaxLossForwardGPU(const int nthreads,
           const Dtype* prob_data, const Dtype* label, Dtype* loss,
           const int num, const int dim, const int spatial_dim,
           const bool has_ignore_label_, const int ignore_label_,
-          Dtype* counts) {
+          Dtype* counts, const Dtype pos_rate) {
   CUDA_KERNEL_LOOP(index, nthreads) {
     const int n = index / spatial_dim;
     const int s = index % spatial_dim;
     const int label_value = static_cast<int>(label[n * spatial_dim + s]);
 
-    Dtype coef = 0.75;
+    Dtype coef = 1 - pos_rate;
     if (has_ignore_label_ && label_value == ignore_label_) {
       loss[index] = 0;
       counts[index] = 0;
@@ -52,9 +52,10 @@ void SoftmaxWithLossLayer<Dtype>::Forward_gpu(
   // to avoid having to allocate additional GPU memory.
   Dtype* counts = prob_.mutable_gpu_diff();
   // NOLINT_NEXT_LINE(whitespace/operators)
+  Dtype pos_rate = this->layer_param_.softmax_param().pos_rate();
   SoftmaxLossForwardGPU<Dtype><<<CAFFE_GET_BLOCKS(nthreads),
       CAFFE_CUDA_NUM_THREADS>>>(nthreads, prob_data, label, loss_data,
-      outer_num_, dim, inner_num_, has_ignore_label_, ignore_label_, counts);
+      outer_num_, dim, inner_num_, has_ignore_label_, ignore_label_, counts, pos_rate);
 
   // printf("inner_num_: %d\n", inner_num_);
   // printf("outer_num_: %d\n", outer_num_);
@@ -77,7 +78,7 @@ template <typename Dtype>
 __global__ void SoftmaxLossBackwardGPU(const int nthreads, const Dtype* top,
           const Dtype* label, Dtype* bottom_diff, const int num, const int dim,
           const int spatial_dim, const bool has_ignore_label_,
-          const int ignore_label_, Dtype* counts, const Dtype* prob_data) {
+          const int ignore_label_, Dtype* counts, const Dtype* prob_data, const Dtype pos_rate) {
   const int channels = dim / spatial_dim;
 
   CUDA_KERNEL_LOOP(index, nthreads) {
@@ -91,7 +92,7 @@ __global__ void SoftmaxLossBackwardGPU(const int nthreads, const Dtype* top,
       }
       counts[index] = 0;
     } else {
-      Dtype coef = 0.75;
+      Dtype coef = 1 - pos_rate;
       if (label_value == 1) {
         bottom_diff[n * dim + spatial_dim + s] = (prob_data[n * dim + spatial_dim + s] - 1) * coef;
         bottom_diff[n * dim + s] = prob_data[n * dim + s] * coef;
