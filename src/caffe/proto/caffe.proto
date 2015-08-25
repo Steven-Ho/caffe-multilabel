@@ -352,6 +352,7 @@ message LayerParameter {
   optional TanHParameter tanh_param = 127;
   optional ThresholdParameter threshold_param = 128;
   optional WindowDataParameter window_data_param = 129;
+  optional HierarchicalSoftmaxParameter hierarchical_param = 137;
 }
 
 // Message that stores parameters used to apply transformation
@@ -852,6 +853,22 @@ message SoftmaxParameter {
   optional float pos_rate = 3 [default = 0.5];
 }
 
+// Message that stores parameters used by SoftmaxLayer, HierarchicalSoftmaxWithLossLayer
+message HierarchicalSoftmaxParameter {
+  enum Engine {
+    DEFAULT = 0;
+    CAFFE = 1;
+    CUDNN = 2;
+  }
+  optional Engine engine = 1 [default = DEFAULT];
+
+  // The axis along which to perform the softmax -- may be negative to index
+  // from the end (e.g., -1 for the last axis).
+  // Any other axes will be evaluated as independent softmaxes.
+  optional int32 axis = 2 [default = 1];
+  repeated int32 tree = 3;
+}
+
 message TanHParameter {
   enum Engine {
     DEFAULT = 0;
@@ -962,6 +979,8 @@ message V1LayerParameter {
     TANH = 23;
     WINDOW_DATA = 24;
     THRESHOLD = 31;
+    HIERARCHICAL_SOFTMAX_LOSS = 40;
+    SOFTMAX_MASK = 41;
   }
   optional LayerType type = 5;
   repeated BlobProto blobs = 6;
@@ -1005,6 +1024,7 @@ message V1LayerParameter {
   optional TransformationParameter transform_param = 36;
   optional LossParameter loss_param = 42;
   optional V0LayerParameter layer = 1;
+  optional HierarchicalSoftmaxParameter hierarchical_param = 43;
 }
 
 // DEPRECATED: V0LayerParameter is the old way of specifying layer parameters
