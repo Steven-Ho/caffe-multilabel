@@ -147,9 +147,10 @@ void SoftmaxWithLossLayer<Dtype>::Backward_gpu(const vector<Blob<Dtype>*>& top,
     // we use to to avoid allocating new GPU memory.
     Dtype* counts = prob_.mutable_gpu_diff();
     // NOLINT_NEXT_LINE(whitespace/operators)
+    Dtype pos_rate = this->layer_param_.softmax_param().pos_rate();
     SoftmaxLossBackwardGPU<Dtype><<<CAFFE_GET_BLOCKS(nthreads),
         CAFFE_CUDA_NUM_THREADS>>>(nthreads, top_data, label, bottom_diff,
-        outer_num_, dim, inner_num_, has_ignore_label_, ignore_label_, counts, prob_data);
+        outer_num_, dim, inner_num_, has_ignore_label_, ignore_label_, counts, prob_data, pos_rate);
     
     //LOG(INFO) << "before sumation";
     Dtype count;    
