@@ -2,6 +2,7 @@
 #include <functional>
 #include <utility>
 #include <vector>
+#include <fstream>
 
 #include "caffe/layer.hpp"
 #include "caffe/util/io.hpp"
@@ -45,6 +46,8 @@ void AccuracyLayer<Dtype>::Reshape(
 template <typename Dtype>
 void AccuracyLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
     const vector<Blob<Dtype>*>& top) {
+  std::ofstream of;
+  of.open("/media/DATA/BigVision/NLTK/caffe/tags_classifier/hierarchical_classification/result.txt", ios::app);
   // Dtype accuracy = 0;
   const Dtype* bottom_data = bottom[0]->cpu_data();
   const Dtype* bottom_label = bottom[1]->cpu_data();
@@ -57,6 +60,11 @@ void AccuracyLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
   int true_negative = 0;
   int false_positive = 0;
   int false_negative = 0;
+  const int auc_pts = 21;
+  vector<int> auc_tp(auc_pts, 0);
+  vector<int> auc_tn(auc_pts, 0);
+  vector<int> auc_fp(auc_pts, 0);
+  vector<int> auc_fn(auc_pts, 0);
   for (int i = 0; i < outer_num_; ++i) {
     for (int j = 0; j < inner_num_; ++j) {
       const int label_value =
@@ -92,6 +100,33 @@ void AccuracyLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
       }
       //for (int k = 0; k < 1; k++) {//top_k_ modified for binary classifier
       //}
+      for (int k = 0; k < auc_pts; k++) {
+
+          Dtype inc = 2.0 * (k - auc_pts / 2) / auc_pts;
+          bottom_data_vector.clear();
+          for (int l = 0; l < num_labels; l++) {
+            bottom_data_vector.push_back(std::make_pair(
+                bottom_data[i * dim + l * inner_num_ + j], l));
+          }
+          bottom_data_vector[1].first += inc;
+          // LOG(INFO) << "first: " << bottom_data_vector[0].first << ", second: " << bottom_data_vector[1].first;
+          std::partial_sort(
+              bottom_data_vector.begin(), bottom_data_vector.begin() + top_k_,
+              bottom_data_vector.end(), std::greater<std::pair<Dtype, int> >());
+          if (label_value == 0) {
+            if (bottom_data_vector[0].second == 0) {
+              auc_tn[k]++;
+            } else {
+              auc_fp[k]++;
+            }
+          } else {
+            if (bottom_data_vector[0].second == 0) {
+              auc_fn[k]++;
+            } else {
+              auc_tp[k]++;
+            }
+          }
+      }
     }
     if (i==0) {
       //LOG(INFO) << "correct: " << correct << ", error: " << error;
@@ -108,6 +143,20 @@ void AccuracyLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
   top[0]->mutable_cpu_data()[3] = Dtype(false_negative) / (true_positive + false_negative);
   top[0]->mutable_cpu_data()[4] = Dtype(true_positive) / (true_positive + false_positive);
   top[0]->mutable_cpu_data()[5] = Dtype(true_negative) / (true_negative + false_negative);
+
+  int l = auc_pts / 2;
+  of << Dtype(sqrt(Dtype(auc_tp[l] * auc_tn[l]) / ((auc_tp[l] + auc_fn[l]) * (auc_tn[l] + auc_fp[l])))) << std::endl;
+  for(int i = 0; i < auc_pts; i++) {
+    of << Dtype(auc_tp[i]) / (auc_tp[i] + auc_fn[i]) << " ";
+    of << Dtype(auc_fp[i]) / (auc_fp[i] + auc_tn[i]) << " ";
+    of << std::endl;
+  }
+  of << std::endl;
+  //LOG(INFO) << "Write in result.txt";
+  /*for (int i = 0; i < auc_pts; i++) {
+    of << auc_tp[i] << " " << auc_fn[i] << " " << auc_tn[i] << " " << auc_fp[i] << std::endl;
+  }
+  of << std::endl;*/
   // Accuracy layer should not be used as a loss function.
 }
 

@@ -214,7 +214,7 @@ void Solver<Dtype>::Step(int iters) {
       LOG(INFO) << "Iteration " << iter_ << ", loss = " << smoothed_loss;
       const vector<Blob<Dtype>*>& result = net_->output_blobs();
       int score_index = 0;
-      for (int j = 0; j < result.size(); ++j) {
+      for (int j = 0; j < 1/*result.size()*/; ++j) {
         const Dtype* result_vec = result[j]->cpu_data();
         const string& output_name =
             net_->blob_names()[net_->output_blob_indices()[j]];
@@ -331,7 +331,7 @@ void Solver<Dtype>::Test(const int test_net_id) {
     loss /= param_.test_iter(test_net_id);
     LOG(INFO) << "Test loss: " << loss;
   }
-  for (int i = 0; i < test_score.size(); ++i) {
+  for (int i = 0; i < 7/*test_score.size()*/; ++i) {
     const int output_blob_index =
         test_net->output_blob_indices()[test_score_output_id[i]];
     const string& output_name = test_net->blob_names()[output_blob_index];

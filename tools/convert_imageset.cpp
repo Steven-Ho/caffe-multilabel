@@ -77,10 +77,13 @@ int main(int argc, char** argv) {
   //}
   //modified
   printf("%s\n",argv[2]);
+  int it = atoi(argv[4]);
+  FLAGS_resize_height = atoi(argv[5]);
+  FLAGS_resize_width = atoi(argv[6]);
   while (infile >> filename) {
     //printf("Processing\n");
     std::vector<int> vec_label;
-    for (int i=0; i<1; i++){
+    for (int i=0; i<it; i++){
       int lab;
       infile >> lab;
       vec_label.push_back(lab);
