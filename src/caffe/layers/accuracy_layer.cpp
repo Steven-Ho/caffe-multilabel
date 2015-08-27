@@ -60,11 +60,11 @@ void AccuracyLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
   int true_negative = 0;
   int false_positive = 0;
   int false_negative = 0;
-  const int auc_pts = 21;
-  vector<int> auc_tp(auc_pts, 0);
-  vector<int> auc_tn(auc_pts, 0);
-  vector<int> auc_fp(auc_pts, 0);
-  vector<int> auc_fn(auc_pts, 0);
+  const int auc_pts = 20;
+  vector<int> auc_tp(2 * auc_pts + 1, 0);
+  vector<int> auc_tn(2 * auc_pts + 1, 0);
+  vector<int> auc_fp(2 * auc_pts + 1, 0);
+  vector<int> auc_fn(2 * auc_pts + 1, 0);
   for (int i = 0; i < outer_num_; ++i) {
     for (int j = 0; j < inner_num_; ++j) {
       const int label_value =
@@ -100,9 +100,9 @@ void AccuracyLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
       }
       //for (int k = 0; k < 1; k++) {//top_k_ modified for binary classifier
       //}
-      for (int k = 0; k < auc_pts; k++) {
-
-          Dtype inc = 2.0 * (k - auc_pts / 2) / auc_pts;
+      for (int k = 0; k < 2 * auc_pts + 1; k++) {
+          int p = k - auc_pts;
+          Dtype inc = (1 - exp(-p)) / (1 + exp(-p));
           bottom_data_vector.clear();
           for (int l = 0; l < num_labels; l++) {
             bottom_data_vector.push_back(std::make_pair(
@@ -144,9 +144,9 @@ void AccuracyLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
   top[0]->mutable_cpu_data()[4] = Dtype(true_positive) / (true_positive + false_positive);
   top[0]->mutable_cpu_data()[5] = Dtype(true_negative) / (true_negative + false_negative);
 
-  int l = auc_pts / 2;
-  of << Dtype(sqrt(Dtype(auc_tp[l] * auc_tn[l]) / ((auc_tp[l] + auc_fn[l]) * (auc_tn[l] + auc_fp[l])))) << std::endl;
-  for(int i = 0; i < auc_pts; i++) {
+  // int l = auc_pts / 2;
+  // of << Dtype(sqrt(Dtype(auc_tp[l] * auc_tn[l]) / ((auc_tp[l] + auc_fn[l]) * (auc_tn[l] + auc_fp[l])))) << std::endl;
+  for(int i = 0; i < 2 * auc_pts + 1; i++) {
     of << Dtype(auc_tp[i]) / (auc_tp[i] + auc_fn[i]) << " ";
     of << Dtype(auc_fp[i]) / (auc_fp[i] + auc_tn[i]) << " ";
     of << std::endl;
