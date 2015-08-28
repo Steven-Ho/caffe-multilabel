@@ -30,16 +30,12 @@ void HierarchicalSoftmaxWithLossLayer<Dtype>::LayerSetUp(
   }
   normalize_ = this->layer_param_.loss_param().normalize();
 
+  label_num_ = this->layer_param_.hierarchical_param().tree_size();
   vector<int> split_dims = bottom[0]->shape();
   split_dims.clear();
   split_dims.push_back(2);
   split_dims.push_back(label_num_);
   split_.Reshape(split_dims);
-  Dtype* split_data = split_.mutable_cpu_data();
-  for (int i = 0; i < label_num_; i++) {
-    split_data[2 * i] = this->layer_param_.hierarchical_param().tree(2 * i);
-    split_data[2 * i + 1] = this->layer_param_.hierarchical_param().tree(2 * i + 1);
-  }
 }
 
 template <typename Dtype>
@@ -59,6 +55,12 @@ void HierarchicalSoftmaxWithLossLayer<Dtype>::Reshape(
   if (top.size() >= 2) {
     // softmax output
     top[1]->ReshapeLike(*bottom[0]);
+  }
+  // LOG(INFO) << "tree size: " << label_num_;
+  Dtype* split_data = split_.mutable_cpu_data();
+  for (int i = 0; i < label_num_; i++) {
+    split_data[2 * i] = this->layer_param_.hierarchical_param().tree(2 * i);
+    split_data[2 * i + 1] = this->layer_param_.hierarchical_param().tree(2 * i + 1);
   }
 }
 

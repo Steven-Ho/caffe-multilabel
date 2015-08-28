@@ -39,7 +39,7 @@ void AccuracyLayer<Dtype>::Reshape(
       << "with integer values in {0, 1, ..., C-1}.";
   //vector<int> top_shape(0);  // Accuracy is a scalar; 0 axes.
   vector<int> top_shape(1);
-  top_shape[0] = 6;
+  top_shape[0] = 7;
   top[0]->Reshape(top_shape);
 }
 
@@ -143,15 +143,17 @@ void AccuracyLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
   top[0]->mutable_cpu_data()[3] = Dtype(false_negative) / (true_positive + false_negative);
   top[0]->mutable_cpu_data()[4] = Dtype(true_positive) / (true_positive + false_positive);
   top[0]->mutable_cpu_data()[5] = Dtype(true_negative) / (true_negative + false_negative);
-
-  // int l = auc_pts / 2;
-  // of << Dtype(sqrt(Dtype(auc_tp[l] * auc_tn[l]) / ((auc_tp[l] + auc_fn[l]) * (auc_tn[l] + auc_fp[l])))) << std::endl;
-  for(int i = 0; i < 2 * auc_pts + 1; i++) {
+  int l = auc_pts;
+  top[0]->mutable_cpu_data()[6] = Dtype(sqrt(Dtype(true_positive * true_negative) / 
+      ((true_positive + false_negative) * (true_negative + false_positive))));
+  //int l = auc_pts / 2;
+  //of << Dtype(sqrt(Dtype(auc_tp[l] * auc_tn[l]) / ((auc_tp[l] + auc_fn[l]) * (auc_tn[l] + auc_fp[l])))) << std::endl;
+  /*for(int i = 0; i < 2 * auc_pts + 1; i++) {
     of << Dtype(auc_tp[i]) / (auc_tp[i] + auc_fn[i]) << " ";
     of << Dtype(auc_fp[i]) / (auc_fp[i] + auc_tn[i]) << " ";
     of << std::endl;
   }
-  of << std::endl;
+  of << std::endl;*/
   //LOG(INFO) << "Write in result.txt";
   /*for (int i = 0; i < auc_pts; i++) {
     of << auc_tp[i] << " " << auc_fn[i] << " " << auc_tn[i] << " " << auc_fp[i] << std::endl;

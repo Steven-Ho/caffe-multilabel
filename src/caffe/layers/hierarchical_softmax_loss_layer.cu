@@ -125,10 +125,11 @@ void HierarchicalSoftmaxWithLossLayer<Dtype>::Backward_gpu(const vector<Blob<Dty
     HierarchicalSoftmaxLossBackwardGPU<Dtype><<<CAFFE_GET_BLOCKS(nthreads),
         CAFFE_CUDA_NUM_THREADS>>>(nthreads, top_data, label, bottom_diff,
         outer_num_, dim, inner_num_, has_ignore_label_, ignore_label_, counts, label_num_, split_data);
+    Dtype count;
+    caffe_gpu_asum(nthreads, counts, &count);
+
     const Dtype loss_weight = top[0]->cpu_diff()[0];
     if (normalize_) {
-      Dtype count;
-      caffe_gpu_asum(nthreads, counts, &count);
       caffe_gpu_scal(prob_.count(), loss_weight / count, bottom_diff);
     } else {
       caffe_gpu_scal(prob_.count(), loss_weight / outer_num_, bottom_diff);

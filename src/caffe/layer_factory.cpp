@@ -134,6 +134,22 @@ shared_ptr<Layer<Dtype> > GetSoftmaxLayer(const LayerParameter& param) {
 
 REGISTER_LAYER_CREATOR(Softmax, GetSoftmaxLayer);
 
+// Get softmax layer according to engine.
+template <typename Dtype>
+shared_ptr<Layer<Dtype> > GetSoftmaxWithMaskLayer(const LayerParameter& param) {
+  HierarchicalSoftmaxParameter_Engine engine = param.hierarchical_param().engine();
+  if (engine == HierarchicalSoftmaxParameter_Engine_DEFAULT) {
+    engine = HierarchicalSoftmaxParameter_Engine_CAFFE;
+  }
+  if (engine == HierarchicalSoftmaxParameter_Engine_CAFFE) {
+    return shared_ptr<Layer<Dtype> >(new SoftmaxWithMaskLayer<Dtype>(param));
+  } else {
+    LOG(FATAL) << "Layer " << param.name() << " has unknown engine.";
+  }
+}
+
+REGISTER_LAYER_CREATOR(SoftmaxWithMask, GetSoftmaxWithMaskLayer);
+
 // Get tanh layer according to engine.
 template <typename Dtype>
 shared_ptr<Layer<Dtype> > GetTanHLayer(const LayerParameter& param) {
