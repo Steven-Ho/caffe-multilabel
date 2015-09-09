@@ -92,7 +92,7 @@ void SoftmaxWithMaskLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom
       int end = split_data[2 * j + 1];
       Dtype dsum = 0;
       for (int k = start; k <= end; k++) {
-        dsum = top_data[k];
+        dsum += top_data[k];
       }
       for (int k = start; k <= end; k++) {
         scale_data[k] = dsum;

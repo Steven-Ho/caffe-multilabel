@@ -110,6 +110,7 @@ void SoftmaxWithMaskLayer<Dtype>::Forward_gpu(const vector<Blob<Dtype>*>& bottom
   // and then normalize.
   // compute max
   // NOLINT_NEXT_LINE(whitespace/operators)
+  // LOG(INFO) << outer_num_ << ", " << inner_num_ << ", " << count;
   kernel_channel_max<Dtype><<<CAFFE_GET_BLOCKS(outer_num_ * inner_num_),
       CAFFE_CUDA_NUM_THREADS>>>(outer_num_, channels, inner_num_, top_data,
       scale_data, split_data, label_num_);

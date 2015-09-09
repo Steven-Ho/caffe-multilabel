@@ -30,7 +30,7 @@ void HierarchicalSoftmaxWithLossLayer<Dtype>::LayerSetUp(
   }
   normalize_ = this->layer_param_.loss_param().normalize();
 
-  label_num_ = this->layer_param_.hierarchical_param().tree_size();
+  label_num_ = this->layer_param_.hierarchical_param().tree_size() / 2;
   vector<int> split_dims = bottom[0]->shape();
   split_dims.clear();
   split_dims.push_back(2);
@@ -62,6 +62,7 @@ void HierarchicalSoftmaxWithLossLayer<Dtype>::Reshape(
     split_data[2 * i] = this->layer_param_.hierarchical_param().tree(2 * i);
     split_data[2 * i + 1] = this->layer_param_.hierarchical_param().tree(2 * i + 1);
   }
+  // LOG(INFO) << split_data[0] << " " << split_data[1];
 }
 
 template <typename Dtype>
@@ -76,7 +77,7 @@ void HierarchicalSoftmaxWithLossLayer<Dtype>::Forward_cpu(
   int count = 0;
   Dtype loss = 0;
 
-  LOG(INFO) << "dim: " << dim << ", labelsize: " << bottom[1]->count();
+  // LOG(INFO) << "dim: " << dim << ", labelsize: " << bottom[1]->count();
   for (int i = 0; i < outer_num_; i++) {
     for (int j = 0; j < label_num_; j++) {
       int start = split_data[2 * j];
@@ -84,13 +85,14 @@ void HierarchicalSoftmaxWithLossLayer<Dtype>::Forward_cpu(
       for (int k = start; k <= end; k++) {
         if (label[i * dim + k] == 1) {
           loss -= log(std::max(prob_data[i * dim + k], Dtype(FLT_MIN)));
+          // LOG(INFO) << "prob[" << i * dim + k << "]: " << prob_data[i * dim + k];
           count++;
           break;
         }
       }
     }
   }
-
+  // LOG(INFO) << "loss: " << loss;
   if (normalize_) {
     top[0]->mutable_cpu_data()[0] = loss / count;
   } else {
@@ -132,7 +134,7 @@ void HierarchicalSoftmaxWithLossLayer<Dtype>::Backward_cpu(const vector<Blob<Dty
         }
         if (flag) {
           bottom_diff[i * dim + index] -= 1;
-          count++;
+          count += end - start + 1;
         } else {
           for (int k = start; k <= end; k++) {
             bottom_diff[i * dim + k] = 0;

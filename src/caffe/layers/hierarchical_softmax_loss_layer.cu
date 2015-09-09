@@ -71,10 +71,10 @@ __global__ void HierarchicalSoftmaxLossBackwardGPU(const int nthreads, const Dty
           const Dtype* label, Dtype* bottom_diff, const int num, const int dim,
           const int spatial_dim, const bool has_ignore_label_,
           const int ignore_label_, Dtype* counts, int label_num_, const Dtype* split_data) {
-  const int channels = dim / spatial_dim;
+  // const int channels = dim / spatial_dim;
 
   CUDA_KERNEL_LOOP(index, nthreads) {
-    const int n = index / spatial_dim;
+    // const int n = index / spatial_dim;
     // const int s = index % spatial_dim;
 
     counts[index] = 0;
@@ -84,18 +84,18 @@ __global__ void HierarchicalSoftmaxLossBackwardGPU(const int nthreads, const Dty
       bool flag = false;
       int idx = 0;
       for (int k = start; k <= end; k++) {
-        if (label[n * channels + k] == 1) {
+        if (label[index * dim + k] == 1) {
           flag = true;
           idx = k;
           break;
         }
       }
       if (flag) {
-        bottom_diff[n * dim + idx] -= 1;
-        counts[index] += 1;
+        bottom_diff[index * dim + idx] -= 1;
+        counts[index] += end - start + 1;
       } else {
         for (int k = start; k <= end; k++) {
-          bottom_diff[n * channels + k] = 0;
+          bottom_diff[index * dim + k] = 0;
         }
       }
     }
@@ -116,7 +116,7 @@ void HierarchicalSoftmaxWithLossLayer<Dtype>::Backward_gpu(const vector<Blob<Dty
     caffe_gpu_memcpy(prob_.count() * sizeof(Dtype), prob_data, bottom_diff);
     const Dtype* label = bottom[1]->gpu_data();
     const int dim = prob_.count() / outer_num_;
-    const int nthreads = outer_num_ * inner_num_;
+    const int nthreads = outer_num_;
     const Dtype* split_data = split_.gpu_data();
     // Since this memory is never used for anything else,
     // we use to to avoid allocating new GPU memory.
@@ -127,13 +127,14 @@ void HierarchicalSoftmaxWithLossLayer<Dtype>::Backward_gpu(const vector<Blob<Dty
         outer_num_, dim, inner_num_, has_ignore_label_, ignore_label_, counts, label_num_, split_data);
     Dtype count;
     caffe_gpu_asum(nthreads, counts, &count);
-
     const Dtype loss_weight = top[0]->cpu_diff()[0];
     if (normalize_) {
       caffe_gpu_scal(prob_.count(), loss_weight / count, bottom_diff);
     } else {
       caffe_gpu_scal(prob_.count(), loss_weight / outer_num_, bottom_diff);
     }
+
+    // LOG(INFO) << prob_data[0];
   }
 }
 
